@@ -10,6 +10,12 @@ import javax.swing.Timer
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonSyntaxException
 
+
+import javax.swing.JTextPane
+import javax.swing.text.StyleConstants
+import javax.swing.text.StyledDocument
+import javax.swing.text.SimpleAttributeSet
+
 fun isValidJson(jsonString: String): Boolean {
     return try {
         JsonParser.parseString(jsonString) // parses both objects and arrays
@@ -69,3 +75,54 @@ fun showToast(parent: javax.swing.JFrame, message: String, durationMs: Int = 200
     // Hide it automatically after durationMs
     Timer(durationMs) { toast.dispose() }.start()
 }
+
+
+fun colorJsonInTextPane(textPane: JTextPane, jsonString: String) {
+    val doc: StyledDocument = textPane.styledDocument
+    doc.remove(0, doc.length) // clear existing text
+
+    val keyAttr = SimpleAttributeSet().apply { StyleConstants.setForeground(this, java.awt.Color.BLUE) }
+    val stringAttr = SimpleAttributeSet().apply { StyleConstants.setForeground(this, java.awt.Color(0,128,0)) } // green
+    val braceAttr = SimpleAttributeSet().apply { StyleConstants.setForeground(this, java.awt.Color.RED) }
+
+    val keyPattern = Regex("\"(\\w+)\"(?=\\s*:)")       // keys
+    val stringPattern = Regex(":\\s*\"([^\"]*)\"")      // string values
+    val bracePattern = Regex("[{}\\[\\]]")             // braces
+
+    var currentIndex = 0
+
+    val gson = GsonBuilder().setPrettyPrinting().create()
+    val prettyJson = gson.toJson(JsonParser.parseString(jsonString))
+
+    while (currentIndex < prettyJson.length) {
+        var matched = false
+
+        // Check braces
+        bracePattern.find(prettyJson, currentIndex)?.takeIf { it.range.first == currentIndex }?.let {
+            doc.insertString(doc.length, it.value, braceAttr)
+            currentIndex = it.range.last + 1
+            matched = true
+        }
+
+        // Check keys
+        keyPattern.find(prettyJson, currentIndex)?.takeIf { it.range.first == currentIndex }?.let {
+            doc.insertString(doc.length, it.value, keyAttr)
+            currentIndex = it.range.last + 1
+            matched = true
+        }
+
+        // Check string values
+        stringPattern.find(prettyJson, currentIndex)?.takeIf { it.range.first == currentIndex }?.let {
+            doc.insertString(doc.length, it.value, stringAttr)
+            currentIndex = it.range.last + 1
+            matched = true
+        }
+
+        // If no match, insert one char as default
+        if (!matched) {
+            doc.insertString(doc.length, prettyJson[currentIndex].toString(), null)
+            currentIndex++
+        }
+    }
+}
+

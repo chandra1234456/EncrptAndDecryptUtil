@@ -1,4 +1,7 @@
-import util.formatJson
+
+import util.NewAESUtil
+import util.NewAESUtil.SECRET_KEY
+import util.colorJsonInTextPane
 import util.isValidJson
 import util.showToast
 import java.awt.Component
@@ -10,7 +13,10 @@ class SimpleUI {
     //private val secretKey = AESUtils.generateKey()  // ✅ ONE KEY
 
     private val jFrame = JFrame()
-    private val inputArea = JTextArea(5, 20)
+   // private val inputArea = JTextArea(5, 20)
+    val inputArea = JTextPane()
+    //inputArea.setBounds(10, 10, 400, 400)
+    //frame.add(inputArea)
     private val outPutArea = JTextArea(5, 20)
     private val encryptButton = JButton("Encrypt")
     private val decryptButton = JButton("Decrypt")
@@ -39,8 +45,8 @@ class SimpleUI {
 
     private fun initializeTextAreas() {
         // Wrap lines and make output read-only
-        inputArea.lineWrap = true
-        inputArea.wrapStyleWord = true
+       // inputArea.lineWrap = true
+        //inputArea.wrapStyleWord = true
 
         outPutArea.lineWrap = true
         outPutArea.wrapStyleWord = true
@@ -66,8 +72,7 @@ class SimpleUI {
         encryptButton.addActionListener {
             val value = inputArea.text.trim()
             if (value.isNotBlank()){
-            val password = "MyStrongPassword123!"
-            val encrypted = AESUtils.encrypt(inputArea.text.trim(), password)
+            val encrypted = NewAESUtil.encrypt(inputArea.text.trim(), SECRET_KEY)
             println("Encrypted: $encrypted")
             // DO NOT modify Base64 string
             outPutArea.text = encrypted
@@ -82,8 +87,7 @@ class SimpleUI {
         decryptButton.addActionListener {
             val value = inputArea.text.trim()
             if (value.isNotBlank()) {
-                val password = "MyStrongPassword123!"
-                val decrypted = AESUtils.decrypt(inputArea.text.trim(), password)
+                val decrypted = NewAESUtil.decrypt(inputArea.text.trim(), SECRET_KEY)
                 println("Decrypted: $decrypted")
                 // You can lowercase only for display, NOT for decryption
                 outPutArea.text = decrypted
@@ -103,18 +107,18 @@ class SimpleUI {
         }
 
         inPutJsonBeautifier.addActionListener {
-            val json = inputArea.text.toString()
-            if (!json.isNullOrBlank()){
-              val actualJson =  isValidJson(json)
-                if (actualJson) {
-                    val output = formatJson(json)
-                    inputArea.text = output
+            val json = inputArea.text
+            if (!json.isNullOrBlank()) {
+                if (isValidJson(json)) {
+                    colorJsonInTextPane(inputArea, json)
+                } else {
+                    showToast(jFrame, "Invalid JSON", 2500)
                 }
-
-            }else{
-                showToast(jFrame, "Please Add Json", 2500)
+            } else {
+                showToast(jFrame, "Please add JSON", 2500)
             }
         }
+
 
     }
     private fun addFrames() {
