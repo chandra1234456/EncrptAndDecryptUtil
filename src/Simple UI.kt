@@ -36,7 +36,7 @@ class SimpleUI {
 
     private fun initializeFrame() {
         with(jFrame) {
-            title = "Simple UI"
+            title = "Encryption And Decryption"
             defaultCloseOperation = JFrame.EXIT_ON_CLOSE
             setSize(700, 300)
             setLocationRelativeTo(null)
