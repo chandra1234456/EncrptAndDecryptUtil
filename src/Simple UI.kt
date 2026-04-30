@@ -204,8 +204,8 @@ fun sectionLabel(text: String, dot: Color): JPanel {
 class SimpleUI {
 
     private val jFrame = JFrame()
-    val inputArea = JTextPane()
-    private val outPutArea = JTextArea(5, 20)
+    private val inputArea = JTextPane()
+    private val outPutArea = JTextPane()
 
     // Buttons — same names, same functionality
     private val encryptButton        = StyledButton("Encrypt",      Theme.ACCENT_PURPLE,   "")
@@ -262,8 +262,6 @@ class SimpleUI {
             foreground  = Theme.ACCENT_GREEN
             caretColor  = Theme.ACCENT_GREEN
             font        = Theme.FONT_MONO
-            lineWrap    = true
-            wrapStyleWord = true
             isEditable  = false
             border      = EmptyBorder(12, 14, 12, 14)
             preferredSize = Dimension(400, 300)
@@ -326,6 +324,18 @@ class SimpleUI {
             if (!json.isNullOrBlank()) {
                 if (isValidJson(json)) {
                     colorJsonInTextPane(inputArea, json)
+                } else {
+                    showToast(jFrame, "Invalid JSON", 2500)
+                }
+            } else {
+                showToast(jFrame, "Please add JSON", 2500)
+            }
+        }
+        outPutJsonBeautifier.addActionListener {
+            val json = outPutArea.text
+            if (!json.isNullOrBlank()) {
+                if (isValidJson(json)) {
+                    colorJsonInTextPane(outPutArea, json)
                 } else {
                     showToast(jFrame, "Invalid JSON", 2500)
                 }

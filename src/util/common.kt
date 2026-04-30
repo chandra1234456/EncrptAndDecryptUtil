@@ -12,6 +12,7 @@ import com.google.gson.JsonSyntaxException
 
 
 import javax.swing.JTextPane
+import javax.swing.text.AttributeSet
 import javax.swing.text.StyleConstants
 import javax.swing.text.StyledDocument
 import javax.swing.text.SimpleAttributeSet
@@ -79,50 +80,89 @@ fun showToast(parent: javax.swing.JFrame, message: String, durationMs: Int = 200
 
 fun colorJsonInTextPane(textPane: JTextPane, jsonString: String) {
     val doc: StyledDocument = textPane.styledDocument
-    doc.remove(0, doc.length) // clear existing text
+    doc.remove(0, doc.length)
 
-    val keyAttr = SimpleAttributeSet().apply { StyleConstants.setForeground(this, java.awt.Color.BLUE) }
-    val stringAttr = SimpleAttributeSet().apply { StyleConstants.setForeground(this, java.awt.Color(0,128,0)) } // green
-    val braceAttr = SimpleAttributeSet().apply { StyleConstants.setForeground(this, java.awt.Color.RED) }
+    // 🎨 Color styles
+    val keyAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color(86, 156, 214)) // blue
+        StyleConstants.setBold(this, true)
+    }
 
-    val keyPattern = Regex("\"(\\w+)\"(?=\\s*:)")       // keys
-    val stringPattern = Regex(":\\s*\"([^\"]*)\"")      // string values
-    val bracePattern = Regex("[{}\\[\\]]")             // braces
+    val stringAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color(106, 153, 85)) // green
+    }
 
-    var currentIndex = 0
+    val numberAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color(181, 206, 168)) // light green/orange mix
+    }
+
+    val booleanAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color(197, 134, 192)) // purple
+        StyleConstants.setBold(this, true)
+    }
+
+    val nullAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color(128, 128, 128)) // gray
+        StyleConstants.setItalic(this, true)
+    }
+
+    val braceAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color(212, 212, 212)) // light gray
+    }
+
+    val colonAttr = SimpleAttributeSet().apply {
+        StyleConstants.setForeground(this, Color.WHITE)
+    }
+
+    // 🔍 Regex patterns
+    val keyPattern = Regex("\"(\\w+)\"(?=\\s*:)")
+    val stringPattern = Regex(":\\s*\"([^\"]*)\"")
+    val numberPattern = Regex(":\\s*(-?\\d+(\\.\\d+)?)")
+    val booleanPattern = Regex(":\\s*(true|false)")
+    val nullPattern = Regex(":\\s*(null)")
+    val bracePattern = Regex("[{}\\[\\]]")
+    val colonPattern = Regex(":")
 
     val gson = GsonBuilder().setPrettyPrinting().create()
     val prettyJson = gson.toJson(JsonParser.parseString(jsonString))
 
-    while (currentIndex < prettyJson.length) {
+    var i = 0
+
+    while (i < prettyJson.length) {
         var matched = false
 
-        // Check braces
-        bracePattern.find(prettyJson, currentIndex)?.takeIf { it.range.first == currentIndex }?.let {
-            doc.insertString(doc.length, it.value, braceAttr)
-            currentIndex = it.range.last + 1
-            matched = true
+        fun match(pattern: Regex, attr: AttributeSet) {
+            val m = pattern.find(prettyJson, i)
+            if (m != null && m.range.first == i) {
+                doc.insertString(doc.length, m.value, attr)
+                i = m.range.last + 1
+                matched = true
+            }
         }
 
-        // Check keys
-        keyPattern.find(prettyJson, currentIndex)?.takeIf { it.range.first == currentIndex }?.let {
-            doc.insertString(doc.length, it.value, keyAttr)
-            currentIndex = it.range.last + 1
-            matched = true
-        }
+        match(bracePattern, braceAttr)
+        if (matched) continue
 
-        // Check string values
-        stringPattern.find(prettyJson, currentIndex)?.takeIf { it.range.first == currentIndex }?.let {
-            doc.insertString(doc.length, it.value, stringAttr)
-            currentIndex = it.range.last + 1
-            matched = true
-        }
+        match(keyPattern, keyAttr)
+        if (matched) continue
 
-        // If no match, insert one char as default
-        if (!matched) {
-            doc.insertString(doc.length, prettyJson[currentIndex].toString(), null)
-            currentIndex++
-        }
+        match(stringPattern, stringAttr)
+        if (matched) continue
+
+        match(numberPattern, numberAttr)
+        if (matched) continue
+
+        match(booleanPattern, booleanAttr)
+        if (matched) continue
+
+        match(nullPattern, nullAttr)
+        if (matched) continue
+
+        match(colonPattern, colonAttr)
+        if (matched) continue
+
+        // default text
+        doc.insertString(doc.length, prettyJson[i].toString(), null)
+        i++
     }
 }
-
