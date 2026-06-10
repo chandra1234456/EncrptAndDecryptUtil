@@ -1,6 +1,8 @@
 import util.NewAESUtil
 import util.NewAESUtil.SECRET_KEY
 import util.colorJsonInTextPane
+import util.getDecryptValue
+import util.getEncryptValue
 import util.isValidJson
 import util.showToast
 import java.awt.*
@@ -206,7 +208,7 @@ class SimpleUI {
     private val jFrame = JFrame()
     private val inputArea = JTextPane()
     private val outPutArea = JTextPane()
-
+    private val installationKeyField = JTextField(10)
     // Buttons — same names, same functionality
     private val encryptButton        = StyledButton("Encrypt",      Theme.ACCENT_PURPLE,   "")
     private val decryptButton        = StyledButton("Decrypt",      Theme.ACCENT_PURPLE,  "")
@@ -268,6 +270,13 @@ class SimpleUI {
             minimumSize   = Dimension(200, 200)
             maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
         }
+        installationKeyField.apply {
+            background = Theme.BG_INPUT
+            foreground = Theme.TEXT_PRIMARY
+            caretColor = Theme.ACCENT_CYAN
+            font = Theme.FONT_MONO
+            border = RoundedBorder(8, Theme.ACCENT_CYAN)
+        }
     }
 
     private fun initializeButtons() {
@@ -294,7 +303,7 @@ class SimpleUI {
         encryptButton.addActionListener {
             val value = inputArea.text.trim()
             if (value.isNotBlank()) {
-                val encrypted = NewAESUtil.encrypt(inputArea.text.trim(), SECRET_KEY)
+                val encrypted = getEncryptValue(inputArea.text.trim(), installationKeyField.text.toString().trim())
                 println("Encrypted: $encrypted")
                 outPutArea.text = encrypted
             } else {
@@ -305,7 +314,7 @@ class SimpleUI {
         decryptButton.addActionListener {
             val value = inputArea.text.trim()
             if (value.isNotBlank()) {
-                val decrypted = NewAESUtil.decrypt(inputArea.text.trim(), SECRET_KEY)
+                val decrypted = getDecryptValue(inputArea.text.trim(), installationKeyField.text.toString().trim())
                 println("Decrypted: $decrypted")
                 outPutArea.text = decrypted
             } else {
@@ -419,7 +428,23 @@ class SimpleUI {
         }
         inputColumn.add(inputScrollPane)
         inputColumn.add(Box.createRigidArea(Dimension(0, 10)))
+        val installationPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            background = Theme.BG_DEEP
+            val label = JLabel("Key:").apply {
+                foreground = Theme.TEXT_PRIMARY
+                font = Theme.FONT_UI_BOLD
+            }
 
+            installationKeyField.maximumSize =
+                Dimension(Int.MAX_VALUE, installationKeyField.preferredSize.height)
+
+            add(label)
+            add(Box.createRigidArea(Dimension(4, 0)))
+            add(installationKeyField)
+        }
+        inputColumn.add(installationPanel)
+      //  inputColumn.add(Box.createRigidArea(Dimension(0, 8)))
         val inputBeautifierPanel = JPanel().apply {
             layout     = BoxLayout(this, BoxLayout.X_AXIS)
             background = Theme.BG_DEEP
