@@ -1,5 +1,4 @@
-import util.NewAESUtil
-import util.NewAESUtil.SECRET_KEY
+
 import util.colorJsonInTextPane
 import util.getDecryptValue
 import util.getEncryptValue
@@ -253,9 +252,9 @@ class SimpleUI {
             caretColor  = Theme.ACCENT_CYAN
             font        = Theme.FONT_MONO
             border      = EmptyBorder(12, 14, 12, 14)
-            preferredSize = Dimension(400, 300)
+            /*preferredSize = Dimension(400, 300)
             minimumSize   = Dimension(200, 200)
-            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)*/
         }
 
         // Output
@@ -266,9 +265,9 @@ class SimpleUI {
             font        = Theme.FONT_MONO
             isEditable  = false
             border      = EmptyBorder(12, 14, 12, 14)
-            preferredSize = Dimension(400, 300)
+           /* preferredSize = Dimension(400, 300)
             minimumSize   = Dimension(200, 200)
-            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)*/
         }
         installationKeyField.apply {
             background = Theme.BG_INPUT
@@ -416,6 +415,7 @@ class SimpleUI {
         val inputColumn = JPanel().apply {
             layout     = BoxLayout(this, BoxLayout.Y_AXIS)
             background = Theme.BG_DEEP
+            maximumSize = Dimension(Int.MAX_VALUE, 420)  // ← cap column height
         }
 
         inputColumn.add(sectionLabel("INPUT", Theme.ACCENT_CYAN))
@@ -424,7 +424,7 @@ class SimpleUI {
         val inputScrollPane = styledScrollPane(inputArea, Theme.ACCENT_CYAN).apply {
             preferredSize = Dimension(400, 300)
             minimumSize   = Dimension(200, 200)
-            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+            //maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
         }
         inputColumn.add(inputScrollPane)
         inputColumn.add(Box.createRigidArea(Dimension(0, 10)))
@@ -497,6 +497,7 @@ class SimpleUI {
         val outputColumn = JPanel().apply {
             layout     = BoxLayout(this, BoxLayout.Y_AXIS)
             background = Theme.BG_DEEP
+            maximumSize = Dimension(Int.MAX_VALUE, 420)  // ← cap column height
         }
 
         outputColumn.add(sectionLabel("OUTPUT", Theme.ACCENT_GREEN))

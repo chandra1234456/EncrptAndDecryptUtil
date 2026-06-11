@@ -86,8 +86,12 @@ fun getDecryptValue(cipherText: String, key: String?): String {
     val gcmParameterSpec = GCMParameterSpec(128, ivBytes)
 
     cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, gcmParameterSpec)
-
-    val decodedBytes = Base64.getDecoder().decode(cipherText)
+    val cleanCipherText = cipherText
+        .replace("\\n", "")
+        .replace("\n", "")
+        .replace("\\u003d", "=")
+        .trim()
+    val decodedBytes = Base64.getDecoder().decode(cleanCipherText)
 
     return String(cipher.doFinal(decodedBytes), StandardCharsets.UTF_8)
 }
