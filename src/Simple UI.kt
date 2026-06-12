@@ -1,4 +1,3 @@
-
 import util.colorJsonInTextPane
 import util.getDecryptValue
 import util.getEncryptValue
@@ -16,20 +15,19 @@ import javax.swing.border.EmptyBorder
 //  THEME CONSTANTS
 // ─────────────────────────────────────────────
 object Theme {
-    val BG_DEEP        = Color(0x0D, 0x11, 0x17)   // near-black navy
-    val BG_PANEL       = Color(0x13, 0x19, 0x22)   // panel surface
-    val BG_INPUT       = Color(0x0A, 0x0E, 0x14)   // input well
-    val BORDER_SUBTLE  = Color(0x1E, 0x28, 0x38)   // subtle border
-    val ACCENT_CYAN    = Color(0x00, 0xD4, 0xFF)   // electric cyan
-    val ACCENT_GREEN   = Color(0x00, 0xFF, 0x9F)   // neon green
-    val ACCENT_ORANGE  = Color(0xFF, 0x6B, 0x35)   // coral orange
-    val ACCENT_PURPLE  = Color(0xBD, 0x93, 0xF9)   // lavender
-    val TEXT_PRIMARY   = Color(0xE8, 0xF4, 0xFF)   // bright white-blue
-    val TEXT_SECONDARY = Color(0x6A, 0x83, 0xA0)   // muted slate
-    val TEXT_MONO      = Color(0xAB, 0xDB, 0xFF)   // code text
+    val BG_DEEP        = Color(0x0D, 0x11, 0x17)
+    val BG_PANEL       = Color(0x13, 0x19, 0x22)
+    val BG_INPUT       = Color(0x0A, 0x0E, 0x14)
+    val BORDER_SUBTLE  = Color(0x1E, 0x28, 0x38)
+    val ACCENT_CYAN    = Color(0x00, 0xD4, 0xFF)
+    val ACCENT_GREEN   = Color(0x00, 0xFF, 0x9F)
+    val ACCENT_ORANGE  = Color(0xFF, 0x6B, 0x35)
+    val ACCENT_PURPLE  = Color(0xBD, 0x93, 0xF9)
+    val TEXT_PRIMARY   = Color(0xE8, 0xF4, 0xFF)
+    val TEXT_SECONDARY = Color(0x6A, 0x83, 0xA0)
+    val TEXT_MONO      = Color(0xAB, 0xDB, 0xFF)
 
     val FONT_MONO = Font("JetBrains Mono", Font.PLAIN, 13).let { requested ->
-        // fallback chain for monospace
         val families = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
         when {
             "JetBrains Mono" in families -> requested
@@ -39,9 +37,9 @@ object Theme {
             else                         -> Font(Font.MONOSPACED,  Font.PLAIN, 13)
         }
     }
-    val FONT_UI_BOLD  = Font("Segoe UI", Font.BOLD, 12)
-    val FONT_UI       = Font("Segoe UI", Font.PLAIN, 12)
-    val FONT_LABEL    = Font("Segoe UI", Font.BOLD, 11)
+    val FONT_UI_BOLD = Font("Segoe UI", Font.BOLD, 12)
+    val FONT_UI      = Font("Segoe UI", Font.PLAIN, 12)
+    val FONT_LABEL   = Font("Segoe UI", Font.BOLD, 11)
 }
 
 // ─────────────────────────────────────────────
@@ -69,7 +67,6 @@ class RoundedBorder(
 // ─────────────────────────────────────────────
 //  STYLED BUTTON
 // ─────────────────────────────────────────────
-
 class StyledButton(
     text: String,
     private val accent: Color,
@@ -81,100 +78,83 @@ class StyledButton(
 
     init {
         isContentAreaFilled = false
-        isFocusPainted = false
-        isBorderPainted = false
-        isOpaque = false   // ✅ IMPORTANT FIX
-
-        foreground = accent
-        font = Theme.FONT_UI_BOLD
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        isFocusPainted      = false
+        isBorderPainted     = false
+        isOpaque            = false
+        foreground          = accent
+        font                = Theme.FONT_UI_BOLD
+        cursor              = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
 
         addMouseListener(object : MouseAdapter() {
-            override fun mouseEntered(e: MouseEvent) {
-                hovered = true
-                repaint()
-            }
-
-            override fun mouseExited(e: MouseEvent) {
-                hovered = false
-                repaint()
-            }
-
-            override fun mousePressed(e: MouseEvent) {
-                pressed = true
-                repaint()
-            }
-
-            override fun mouseReleased(e: MouseEvent) {
-                pressed = false
-                repaint()
-            }
+            override fun mouseEntered(e: MouseEvent)  { hovered = true;  repaint() }
+            override fun mouseExited(e: MouseEvent)   { hovered = false; repaint() }
+            override fun mousePressed(e: MouseEvent)  { pressed = true;  repaint() }
+            override fun mouseReleased(e: MouseEvent) { pressed = false; repaint() }
         })
     }
 
     override fun paintComponent(g: Graphics) {
         val g2 = g.create() as Graphics2D
-
-        g2.setRenderingHint(
-            RenderingHints.KEY_ANTIALIASING,
-            RenderingHints.VALUE_ANTIALIAS_ON
-        )
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
         val arc = 10
 
-        // background states (stable colors instead of alpha issues)
+        // FIX: blend toward BG_PANEL instead of black so hover is visible on dark theme
         val bgColor = when {
-            pressed -> blend(accent, 0.20)
-            hovered -> blend(accent, 0.12)
-            else -> blend(accent, 0.08)
+            pressed -> blendToward(accent, Theme.BG_PANEL, 0.30)
+            hovered -> blendToward(accent, Theme.BG_PANEL, 0.18)
+            else    -> blendToward(accent, Theme.BG_PANEL, 0.10)
         }
 
         g2.color = bgColor
         g2.fillRoundRect(0, 0, width, height, arc, arc)
 
-        // border
-        g2.color = accent
+        g2.color  = accent
         g2.stroke = BasicStroke(if (pressed) 2f else 1.2f)
         g2.drawRoundRect(1, 1, width - 2, height - 2, arc, arc)
-
         g2.dispose()
 
-        // IMPORTANT: let Swing draw text AFTER background
         super.paintComponent(g)
     }
 
-    private fun blend(color: Color, factor: Double): Color {
+    /**
+     * Blend [base] toward [target] by [factor] (0.0 = pure target, 1.0 = pure base).
+     * Replaces the old blend-to-black helper so buttons stay visible on dark backgrounds.
+     */
+    private fun blendToward(base: Color, target: Color, factor: Double): Color {
+        val f = factor.coerceIn(0.0, 1.0)
         return Color(
-            (color.red * factor).toInt().coerceIn(0, 255),
-            (color.green * factor).toInt().coerceIn(0, 255),
-            (color.blue * factor).toInt().coerceIn(0, 255)
+            (base.red   * f + target.red   * (1 - f)).toInt().coerceIn(0, 255),
+            (base.green * f + target.green * (1 - f)).toInt().coerceIn(0, 255),
+            (base.blue  * f + target.blue  * (1 - f)).toInt().coerceIn(0, 255)
         )
     }
 }
+
 // ─────────────────────────────────────────────
 //  STYLED SCROLL PANE
 // ─────────────────────────────────────────────
 fun styledScrollPane(view: Component, accentColor: Color): JScrollPane {
     return JScrollPane(view).apply {
-        border = RoundedBorder(10, accentColor, 1f)
+        border     = RoundedBorder(10, accentColor, 1f)
         background = Theme.BG_INPUT
         viewport.background = Theme.BG_INPUT
 
         verticalScrollBar.apply {
             preferredSize = Dimension(6, 0)
-            isOpaque = false
+            isOpaque      = false
             setUI(object : javax.swing.plaf.basic.BasicScrollBarUI() {
                 override fun configureScrollBarColors() {
                     thumbColor = Color(accentColor.red, accentColor.green, accentColor.blue, 90)
                     trackColor = Theme.BG_INPUT
                 }
-                override fun createDecreaseButton(o: Int) = JButton().apply { preferredSize = Dimension(0,0) }
-                override fun createIncreaseButton(o: Int) = JButton().apply { preferredSize = Dimension(0,0) }
+                override fun createDecreaseButton(o: Int) = JButton().apply { preferredSize = Dimension(0, 0) }
+                override fun createIncreaseButton(o: Int) = JButton().apply { preferredSize = Dimension(0, 0) }
             })
         }
-        horizontalScrollBar.preferredSize = Dimension(0, 5)
-        verticalScrollBarPolicy   = JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
-        horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        horizontalScrollBar.preferredSize    = Dimension(0, 5)
+        verticalScrollBarPolicy              = JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
+        horizontalScrollBarPolicy            = JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
     }
 }
 
@@ -183,18 +163,16 @@ fun styledScrollPane(view: Component, accentColor: Color): JScrollPane {
 // ─────────────────────────────────────────────
 fun sectionLabel(text: String, dot: Color): JPanel {
     return JPanel().apply {
-        layout = BoxLayout(this, BoxLayout.X_AXIS)
+        layout  = BoxLayout(this, BoxLayout.X_AXIS)
         isOpaque = false
-        val dotLabel = JLabel("●").apply {
-            font = Font(Font.SANS_SERIF, Font.PLAIN, 8)
+        add(JLabel("●").apply {
+            font      = Font(Font.SANS_SERIF, Font.PLAIN, 8)
             foreground = dot
-        }
-        val textLabel = JLabel("  $text").apply {
-            font = Theme.FONT_LABEL
+        })
+        add(JLabel("  $text").apply {
+            font      = Theme.FONT_LABEL
             foreground = Theme.TEXT_SECONDARY
-        }
-        add(dotLabel)
-        add(textLabel)
+        })
         add(Box.createHorizontalGlue())
     }
 }
@@ -204,40 +182,66 @@ fun sectionLabel(text: String, dot: Color): JPanel {
 // ─────────────────────────────────────────────
 class SimpleUI {
 
-    private val jFrame = JFrame()
-    private val inputArea = JTextPane()
-    private val outPutArea = JTextPane()
+    private val jFrame               = JFrame()
+    private val inputArea            = JTextPane()
+    private val outPutArea           = JTextPane()
     private val installationKeyField = JTextField(10)
-    // Buttons — same names, same functionality
-    private val encryptButton        = StyledButton("Encrypt",      Theme.ACCENT_PURPLE,   "")
-    private val decryptButton        = StyledButton("Decrypt",      Theme.ACCENT_PURPLE,  "")
-    private val clearButton          = StyledButton("Clear",        Theme.ACCENT_PURPLE, "X")
-    private val inPutJsonBeautifier  = StyledButton("JSON",         Theme.ACCENT_PURPLE, "{}")
-    private val inPutXmlBeautifier   = StyledButton("XML",          Theme.ACCENT_PURPLE, "</>")
-    private val outPutJsonBeautifier = StyledButton("JSON",         Theme.ACCENT_PURPLE, "{}")
-    private val outPutXmlBeautifier  = StyledButton("XML",          Theme.ACCENT_PURPLE, "</>")
+
+    // FIX: LogPanel promoted to class field so it is accessible from both
+    //      addButtonListeners() and addFrames() without being re-created.
+    private val logPanel = LogPanel()
+
+    private val encryptButton        = StyledButton("Encrypt", Theme.ACCENT_PURPLE, "")
+    private val decryptButton        = StyledButton("Decrypt", Theme.ACCENT_PURPLE, "")
+    private val clearButton          = StyledButton("Clear",   Theme.ACCENT_PURPLE, "X")
+    private val inPutJsonBeautifier  = StyledButton("JSON",    Theme.ACCENT_PURPLE, "{}")
+    private val inPutXmlBeautifier   = StyledButton("XML",     Theme.ACCENT_PURPLE, "</>")
+    private val outPutJsonBeautifier = StyledButton("JSON",    Theme.ACCENT_PURPLE, "{}")
+    private val outPutXmlBeautifier  = StyledButton("XML",     Theme.ACCENT_PURPLE, "</>")
+
+    // FIX: logsBtn and logBadge promoted to fields so addFrames() can embed them
+    //      in the title bar without orphaned add() calls inside addButtonListeners().
+    private val logsBtn = StyledButton("Logs", Theme.ACCENT_CYAN, "ⓘ").apply {
+        preferredSize = Dimension(90, 30)
+        maximumSize   = Dimension(90, 30)
+    }
+    private val logBadge = JLabel().apply {
+        font       = Font(Font.SANS_SERIF, Font.BOLD, 9)
+        foreground = Color.WHITE
+        background = Color(0xE5, 0x39, 0x35)
+        isOpaque   = true
+        border     = EmptyBorder(1, 5, 1, 5)
+    }
 
     init {
         setGlobalUIDefaults()
         initializeFrame()
         initializeTextAreas()
         initializeButtons()
-        addFrames()
-        addButtonListeners()
+        addFrames()           // build UI structure first
+        addButtonListeners()  // then wire up listeners
+        syncLogBadge()
+    }
+
+    // ── Keeps the badge label in sync with the LogPanel's unread count ──
+    private fun syncLogBadge() {
+        val count = logPanel.getBadgeLabel().text
+        logBadge.text      = count
+        logBadge.isVisible = count.isNotBlank() && count != "0"
     }
 
     private fun setGlobalUIDefaults() {
-        UIManager.put("OptionPane.background",          Theme.BG_PANEL)
-        UIManager.put("Panel.background",               Theme.BG_PANEL)
-        UIManager.put("OptionPane.messageForeground",   Theme.TEXT_PRIMARY)
-        UIManager.put("Button.background",              Theme.BG_PANEL)
-        UIManager.put("Button.foreground",              Theme.TEXT_PRIMARY)
+        UIManager.put("OptionPane.background",        Theme.BG_PANEL)
+        UIManager.put("Panel.background",             Theme.BG_PANEL)
+        UIManager.put("OptionPane.messageForeground", Theme.TEXT_PRIMARY)
+        UIManager.put("Button.background",            Theme.BG_PANEL)
+        UIManager.put("Button.foreground",            Theme.TEXT_PRIMARY)
     }
 
     private fun initializeFrame() {
         with(jFrame) {
-            title = "  ⬡  CryptoTool  —  AES Encrypt / Decrypt"
-            defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+            title                  = "  ⬡  CryptoTool  —  AES Encrypt / Decrypt"
+            defaultCloseOperation  = JFrame.EXIT_ON_CLOSE
             setSize(1000, 580)
             setLocationRelativeTo(null)
             contentPane.background = Theme.BG_DEEP
@@ -245,53 +249,39 @@ class SimpleUI {
     }
 
     private fun initializeTextAreas() {
-        // Input
         inputArea.apply {
-            background  = Theme.BG_INPUT
-            foreground  = Theme.TEXT_MONO
-            caretColor  = Theme.ACCENT_CYAN
-            font        = Theme.FONT_MONO
-            border      = EmptyBorder(12, 14, 12, 14)
-            /*preferredSize = Dimension(400, 300)
-            minimumSize   = Dimension(200, 200)
-            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)*/
+            background = Theme.BG_INPUT
+            foreground = Theme.TEXT_MONO
+            caretColor = Theme.ACCENT_CYAN
+            font       = Theme.FONT_MONO
+            border     = EmptyBorder(12, 14, 12, 14)
         }
-
-        // Output
         outPutArea.apply {
-            background  = Theme.BG_INPUT
-            foreground  = Theme.ACCENT_GREEN
-            caretColor  = Theme.ACCENT_GREEN
-            font        = Theme.FONT_MONO
-            isEditable  = false
-            border      = EmptyBorder(12, 14, 12, 14)
-           /* preferredSize = Dimension(400, 300)
-            minimumSize   = Dimension(200, 200)
-            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)*/
+            background = Theme.BG_INPUT
+            foreground = Theme.ACCENT_GREEN
+            caretColor = Theme.ACCENT_GREEN
+            font       = Theme.FONT_MONO
+            isEditable = false
+            border     = EmptyBorder(12, 14, 12, 14)
         }
         installationKeyField.apply {
             background = Theme.BG_INPUT
             foreground = Theme.TEXT_PRIMARY
             caretColor = Theme.ACCENT_CYAN
-            font = Theme.FONT_MONO
-            border = RoundedBorder(8, Theme.ACCENT_CYAN)
+            font       = Theme.FONT_MONO
+            border     = RoundedBorder(8, Theme.ACCENT_CYAN)
         }
     }
 
     private fun initializeButtons() {
-        val btnSize = Dimension(130, 38)
-        encryptButton.preferredSize = btnSize
-        encryptButton.maximumSize   = btnSize
-        decryptButton.preferredSize = btnSize
-        decryptButton.maximumSize   = btnSize
-        clearButton.preferredSize   = btnSize
-        clearButton.maximumSize     = btnSize
-
-        encryptButton.alignmentX = Component.CENTER_ALIGNMENT
-        decryptButton.alignmentX = Component.CENTER_ALIGNMENT
-        clearButton.alignmentX   = Component.CENTER_ALIGNMENT
-
+        val btnSize  = Dimension(130, 38)
         val smallBtn = Dimension(90, 30)
+
+        for (b in listOf(encryptButton, decryptButton, clearButton)) {
+            b.preferredSize = btnSize
+            b.maximumSize   = btnSize
+            b.alignmentX    = Component.CENTER_ALIGNMENT
+        }
         for (b in listOf(inPutJsonBeautifier, inPutXmlBeautifier, outPutJsonBeautifier, outPutXmlBeautifier)) {
             b.preferredSize = smallBtn
             b.maximumSize   = smallBtn
@@ -299,100 +289,168 @@ class SimpleUI {
     }
 
     private fun addButtonListeners() {
+        // ── Encrypt ──────────────────────────────────────────────────
         encryptButton.addActionListener {
             val value = inputArea.text.trim()
             if (value.isNotBlank()) {
-                val encrypted = getEncryptValue(inputArea.text.trim(), installationKeyField.text.toString().trim())
-                println("Encrypted: $encrypted")
-                outPutArea.text = encrypted
+                try {
+                    val encrypted = getEncryptValue(value, installationKeyField.text.trim())
+                    outPutArea.text = encrypted
+                    logPanel.info("Encrypt successful (${value.length} chars)")
+                } catch (e: Exception) {
+                    logPanel.error("Encrypt failed: ${e.message}", e)
+                    showStyledDialog("Encryption error: ${e.message}")
+                }
+                syncLogBadge()
             } else {
                 showStyledDialog("Input field must not be empty before encrypting.")
             }
         }
 
+        // ── Decrypt ──────────────────────────────────────────────────
         decryptButton.addActionListener {
             val value = inputArea.text.trim()
             if (value.isNotBlank()) {
-                val decrypted = getDecryptValue(inputArea.text.trim(), installationKeyField.text.toString().trim())
-                println("Decrypted: $decrypted")
-                outPutArea.text = decrypted
+                try {
+                    val decrypted = getDecryptValue(value, installationKeyField.text.trim())
+                    outPutArea.text = decrypted
+                    logPanel.info("Decrypt successful")
+                } catch (e: Exception) {
+                    logPanel.error("Decrypt failed: ${e.message}", e)
+                    showStyledDialog("Decryption error: ${e.message}")
+                }
+                syncLogBadge()
             } else {
                 showStyledDialog("Input field must not be empty before decrypting.")
             }
         }
 
+        // ── Clear ────────────────────────────────────────────────────
         clearButton.addActionListener {
             outPutArea.text = ""
             inputArea.text  = ""
             showToast(jFrame, "Data Cleared", 2500)
         }
 
+        // ── Logs toggle ──────────────────────────────────────────────
+        logsBtn.addActionListener {
+            logPanel.toggle()
+        }
+
+        // ── Input JSON beautifier ────────────────────────────────────
         inPutJsonBeautifier.addActionListener {
             val json = inputArea.text
-            if (!json.isNullOrBlank()) {
-                if (isValidJson(json)) {
-                    colorJsonInTextPane(inputArea, json)
-                } else {
-                    showToast(jFrame, "Invalid JSON", 2500)
-                }
-            } else {
-                showToast(jFrame, "Please add JSON", 2500)
+            when {
+                json.isNullOrBlank() -> showToast(jFrame, "Please add JSON", 2500)
+                isValidJson(json)    -> colorJsonInTextPane(inputArea, json)
+                else                 -> showToast(jFrame, "Invalid JSON", 2500)
             }
         }
+
+        // ── Input XML beautifier ─────────────────────────────────────
+        // FIX: was missing entirely in original code
+        inPutXmlBeautifier.addActionListener {
+            val xml = inputArea.text
+            if (xml.isNullOrBlank()) {
+                showToast(jFrame, "Please add XML", 2500)
+            } else {
+                try {
+                    val formatted = formatXml(xml)
+                    inputArea.text = formatted
+                } catch (e: Exception) {
+                    showToast(jFrame, "Invalid XML", 2500)
+                }
+            }
+        }
+
+        // ── Output JSON beautifier ───────────────────────────────────
         outPutJsonBeautifier.addActionListener {
             val json = outPutArea.text
-            if (!json.isNullOrBlank()) {
-                if (isValidJson(json)) {
-                    colorJsonInTextPane(outPutArea, json)
-                } else {
-                    showToast(jFrame, "Invalid JSON", 2500)
-                }
-            } else {
-                showToast(jFrame, "Please add JSON", 2500)
+            when {
+                json.isNullOrBlank() -> showToast(jFrame, "Please add JSON", 2500)
+                isValidJson(json)    -> colorJsonInTextPane(outPutArea, json)
+                else                 -> showToast(jFrame, "Invalid JSON", 2500)
             }
         }
+
+        // ── Output XML beautifier ────────────────────────────────────
+        // FIX: was missing entirely in original code
+        outPutXmlBeautifier.addActionListener {
+            val xml = outPutArea.text
+            if (xml.isNullOrBlank()) {
+                showToast(jFrame, "Please add XML", 2500)
+            } else {
+                try {
+                    val formatted = formatXml(xml)
+                    outPutArea.text = formatted
+                } catch (e: Exception) {
+                    showToast(jFrame, "Invalid XML", 2500)
+                }
+            }
+        }
+    }
+
+    /**
+     * Minimal XML pretty-printer using the JDK's built-in Transformer.
+     * No external dependency required.
+     */
+    private fun formatXml(xml: String): String {
+        val factory = javax.xml.transform.TransformerFactory.newInstance()
+        val transformer = factory.newTransformer().apply {
+            setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes")
+            setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+            setOutputProperty(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION, "yes")
+        }
+        val source = javax.xml.transform.stream.StreamSource(java.io.StringReader(xml))
+        val result = javax.xml.transform.stream.StreamResult(java.io.StringWriter())
+        transformer.transform(source, result)
+        return result.writer.toString().trim()
     }
 
     private fun showStyledDialog(message: String) {
-        JOptionPane.showMessageDialog(
-            jFrame, message, "CryptoTool", JOptionPane.ERROR_MESSAGE
-        )
+        JOptionPane.showMessageDialog(jFrame, message, "CryptoTool", JOptionPane.ERROR_MESSAGE)
     }
 
     private fun addFrames() {
-        // ── Title Bar Strip ────────────────────────────────────────────
+        // ── Title Bar ─────────────────────────────────────────────────
         val titleBar = JPanel().apply {
-            layout     = BoxLayout(this, BoxLayout.X_AXIS)
-            background = Theme.BG_PANEL
-            border     = EmptyBorder(10, 20, 10, 20)
+            layout      = BoxLayout(this, BoxLayout.X_AXIS)
+            background  = Theme.BG_PANEL
+            border      = EmptyBorder(10, 20, 10, 20)
             maximumSize = Dimension(Int.MAX_VALUE, 44)
 
-            val appIcon = JLabel("⬡").apply {
+            add(JLabel("⬡").apply {
                 font      = Font(Font.SANS_SERIF, Font.BOLD, 18)
                 foreground = Theme.ACCENT_CYAN
-            }
-            val appName = JLabel("  CryptoTool").apply {
+            })
+            add(JLabel("  CryptoTool").apply {
                 font      = Font("Segoe UI", Font.BOLD, 14)
                 foreground = Theme.TEXT_PRIMARY
-            }
-            val version = JLabel("  v1.0  ·  AES-256").apply {
+            })
+            add(JLabel("  v1.0  ·  AES-256").apply {
                 font      = Theme.FONT_LABEL
                 foreground = Theme.TEXT_SECONDARY
-            }
-
-            add(appIcon)
-            add(appName)
-            add(version)
+            })
             add(Box.createHorizontalGlue())
 
-            // Status dots (decorative)
-            for ((col, tip) in listOf(Theme.ACCENT_ORANGE to "Close", Color(0xF1, 0xC4, 0x0F) to "Minimise", Theme.ACCENT_GREEN to "Full Screen")) {
-                val dot = JLabel("●").apply {
-                    font      = Font(Font.SANS_SERIF, Font.PLAIN, 14)
-                    foreground = col
+            // FIX: Logs button and badge are now properly added to titleBar here,
+            //      instead of being orphaned inside addButtonListeners().
+            add(logsBtn)
+            add(Box.createRigidArea(Dimension(4, 0)))
+            add(logBadge)
+            add(Box.createRigidArea(Dimension(16, 0)))
+
+            // Traffic-light status dots (decorative)
+            for ((col, tip) in listOf(
+                Theme.ACCENT_ORANGE       to "Close",
+                Color(0xF1, 0xC4, 0x0F)  to "Minimise",
+                Theme.ACCENT_GREEN        to "Full Screen"
+            )) {
+                add(JLabel("●").apply {
+                    font        = Font(Font.SANS_SERIF, Font.PLAIN, 14)
+                    foreground  = col
                     toolTipText = tip
-                }
-                add(dot)
+                })
                 add(Box.createRigidArea(Dimension(6, 0)))
             }
         }
@@ -415,47 +473,44 @@ class SimpleUI {
         val inputColumn = JPanel().apply {
             layout     = BoxLayout(this, BoxLayout.Y_AXIS)
             background = Theme.BG_DEEP
-            maximumSize = Dimension(Int.MAX_VALUE, 420)  // ← cap column height
         }
-
         inputColumn.add(sectionLabel("INPUT", Theme.ACCENT_CYAN))
         inputColumn.add(Box.createRigidArea(Dimension(0, 6)))
-
-        val inputScrollPane = styledScrollPane(inputArea, Theme.ACCENT_CYAN).apply {
+        inputColumn.add(styledScrollPane(inputArea, Theme.ACCENT_CYAN).apply {
             preferredSize = Dimension(400, 300)
-            minimumSize   = Dimension(200, 200)
-            //maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
-        }
-        inputColumn.add(inputScrollPane)
+            minimumSize   = Dimension(200, 150)
+        })
         inputColumn.add(Box.createRigidArea(Dimension(0, 10)))
-        val installationPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.X_AXIS)
-            background = Theme.BG_DEEP
-            val label = JLabel("Key:").apply {
-                foreground = Theme.TEXT_PRIMARY
-                font = Theme.FONT_UI_BOLD
-            }
 
-            installationKeyField.maximumSize =
-                Dimension(Int.MAX_VALUE, installationKeyField.preferredSize.height)
-
-            add(label)
-            add(Box.createRigidArea(Dimension(4, 0)))
-            add(installationKeyField)
-        }
-        inputColumn.add(installationPanel)
-      //  inputColumn.add(Box.createRigidArea(Dimension(0, 8)))
-        val inputBeautifierPanel = JPanel().apply {
+        // Key field row
+        inputColumn.add(JPanel().apply {
             layout     = BoxLayout(this, BoxLayout.X_AXIS)
             background = Theme.BG_DEEP
+            // FIX: maximumSize height derived AFTER font/border are applied in initializeTextAreas()
+            installationKeyField.maximumSize = Dimension(
+                Int.MAX_VALUE,
+                installationKeyField.preferredSize.height.coerceAtLeast(32)
+            )
+            add(JLabel("Key:").apply {
+                foreground = Theme.TEXT_PRIMARY
+                font       = Theme.FONT_UI_BOLD
+            })
+            add(Box.createRigidArea(Dimension(4, 0)))
+            add(installationKeyField)
+        })
+        inputColumn.add(Box.createRigidArea(Dimension(0, 8)))
+
+        // Input beautifier row
+        inputColumn.add(JPanel().apply {
+            layout      = BoxLayout(this, BoxLayout.X_AXIS)
+            background  = Theme.BG_DEEP
             maximumSize = Dimension(Int.MAX_VALUE, 40)
             add(Box.createHorizontalGlue())
             add(inPutXmlBeautifier)
             add(Box.createRigidArea(Dimension(8, 0)))
             add(inPutJsonBeautifier)
             add(Box.createHorizontalGlue())
-        }
-        inputColumn.add(inputBeautifierPanel)
+        })
 
         /* ── BUTTON COLUMN ── */
         val buttonColumn = JPanel().apply {
@@ -463,32 +518,18 @@ class SimpleUI {
             background = Theme.BG_DEEP
             alignmentX = Component.CENTER_ALIGNMENT
         }
-
         buttonColumn.add(Box.createVerticalGlue())
-
-        // Divider line above buttons
-        val divTop = JSeparator(SwingConstants.VERTICAL).apply {
-            foreground  = Theme.BORDER_SUBTLE
-            maximumSize = Dimension(1, 40)
-        }
-
-        encryptButton.alignmentX = Component.CENTER_ALIGNMENT
-        decryptButton.alignmentX = Component.CENTER_ALIGNMENT
-        clearButton.alignmentX   = Component.CENTER_ALIGNMENT
-
         buttonColumn.add(encryptButton)
         buttonColumn.add(Box.createRigidArea(Dimension(0, 12)))
         buttonColumn.add(decryptButton)
         buttonColumn.add(Box.createRigidArea(Dimension(0, 12)))
-
-        // Thin divider between action + clear
-        val divider = JPanel().apply {
-            background  = Theme.BORDER_SUBTLE
-            maximumSize = Dimension(80, 1)
+        // Thin divider between action buttons and clear
+        buttonColumn.add(JPanel().apply {
+            background    = Theme.BORDER_SUBTLE
+            maximumSize   = Dimension(80, 1)
             preferredSize = Dimension(80, 1)
-            alignmentX  = Component.CENTER_ALIGNMENT
-        }
-        buttonColumn.add(divider)
+            alignmentX    = Component.CENTER_ALIGNMENT
+        })
         buttonColumn.add(Box.createRigidArea(Dimension(0, 12)))
         buttonColumn.add(clearButton)
         buttonColumn.add(Box.createVerticalGlue())
@@ -497,33 +538,28 @@ class SimpleUI {
         val outputColumn = JPanel().apply {
             layout     = BoxLayout(this, BoxLayout.Y_AXIS)
             background = Theme.BG_DEEP
-            maximumSize = Dimension(Int.MAX_VALUE, 420)  // ← cap column height
         }
-
         outputColumn.add(sectionLabel("OUTPUT", Theme.ACCENT_GREEN))
         outputColumn.add(Box.createRigidArea(Dimension(0, 6)))
-
-        val outputScrollPane = styledScrollPane(outPutArea, Theme.ACCENT_GREEN).apply {
+        outputColumn.add(styledScrollPane(outPutArea, Theme.ACCENT_GREEN).apply {
             preferredSize = Dimension(400, 300)
-            minimumSize   = Dimension(200, 200)
-            maximumSize   = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
-        }
-        outputColumn.add(outputScrollPane)
+            minimumSize   = Dimension(200, 150)
+        })
         outputColumn.add(Box.createRigidArea(Dimension(0, 10)))
 
-        val outputBeautifierPanel = JPanel().apply {
-            layout     = BoxLayout(this, BoxLayout.X_AXIS)
-            background = Theme.BG_DEEP
+        // Output beautifier row
+        outputColumn.add(JPanel().apply {
+            layout      = BoxLayout(this, BoxLayout.X_AXIS)
+            background  = Theme.BG_DEEP
             maximumSize = Dimension(Int.MAX_VALUE, 40)
             add(Box.createHorizontalGlue())
             add(outPutXmlBeautifier)
             add(Box.createRigidArea(Dimension(8, 0)))
             add(outPutJsonBeautifier)
             add(Box.createHorizontalGlue())
-        }
-        outputColumn.add(outputBeautifierPanel)
+        })
 
-        /* ── ASSEMBLE ── */
+        /* ── ASSEMBLE MAIN PANEL ── */
         mainPanel.add(inputColumn)
         mainPanel.add(Box.createRigidArea(Dimension(18, 0)))
         mainPanel.add(buttonColumn)
@@ -532,23 +568,20 @@ class SimpleUI {
 
         // ── Status Bar ────────────────────────────────────────────────
         val statusBar = JPanel().apply {
-            layout     = BoxLayout(this, BoxLayout.X_AXIS)
-            background = Theme.BG_PANEL
-            border     = EmptyBorder(6, 20, 6, 20)
+            layout      = BoxLayout(this, BoxLayout.X_AXIS)
+            background  = Theme.BG_PANEL
+            border      = EmptyBorder(6, 20, 6, 20)
             maximumSize = Dimension(Int.MAX_VALUE, 32)
 
-            val statusDot = JLabel("●  Ready").apply {
+            add(JLabel("●  Ready").apply {
                 font      = Theme.FONT_LABEL
                 foreground = Theme.ACCENT_GREEN
-            }
-            val algo = JLabel("AES-256-CBC  ·  Base64 encoded").apply {
+            })
+            add(Box.createHorizontalGlue())
+            add(JLabel("AES-256-CBC  ·  Base64 encoded").apply {
                 font      = Theme.FONT_LABEL
                 foreground = Theme.TEXT_SECONDARY
-            }
-
-            add(statusDot)
-            add(Box.createHorizontalGlue())
-            add(algo)
+            })
         }
 
         // ── Root Layout ───────────────────────────────────────────────
