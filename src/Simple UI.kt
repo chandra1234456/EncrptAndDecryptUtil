@@ -186,6 +186,7 @@ class SimpleUI {
     private val inputArea            = JTextPane()
     private val outPutArea           = JTextPane()
     private val installationKeyField = JTextField(10)
+    private lateinit var statusLabel: JLabel
 
     // FIX: LogPanel promoted to class field so it is accessible from both
     //      addButtonListeners() and addFrames() without being re-created.
@@ -230,12 +231,44 @@ class SimpleUI {
         logBadge.isVisible = count.isNotBlank() && count != "0"
     }
 
+
     private fun setGlobalUIDefaults() {
         UIManager.put("OptionPane.background",        Theme.BG_PANEL)
         UIManager.put("Panel.background",             Theme.BG_PANEL)
         UIManager.put("OptionPane.messageForeground", Theme.TEXT_PRIMARY)
         UIManager.put("Button.background",            Theme.BG_PANEL)
         UIManager.put("Button.foreground",            Theme.TEXT_PRIMARY)
+    }
+
+    private fun setBusy(busy: Boolean, activeLabel: String = "") {
+        encryptButton.isEnabled = !busy
+        decryptButton.isEnabled = !busy
+        clearButton.isEnabled   = !busy
+        if (::statusLabel.isInitialized) {
+            statusLabel.text = if (busy) "●  $activeLabel…" else "●  Ready"
+            statusLabel.foreground = if (busy) Theme.ACCENT_ORANGE else Theme.ACCENT_GREEN
+        }
+        jFrame.cursor = if (busy) Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) else Cursor.getDefaultCursor()
+    }
+
+    private fun runCryptoTask(
+        activeLabel: String,
+        work: () -> String,
+        onSuccess: (String) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        setBusy(true, activeLabel)
+        object : SwingWorker<String, Unit>() {
+            override fun doInBackground(): String = work()
+            override fun done() {
+                setBusy(false)
+                try {
+                    onSuccess(get())
+                } catch (e: Exception) {
+                    onFailure((e.cause as? Exception) ?: e)
+                }
+            }
+        }.execute()
     }
 
     private fun initializeFrame() {
@@ -292,34 +325,47 @@ class SimpleUI {
         // ── Encrypt ──────────────────────────────────────────────────
         encryptButton.addActionListener {
             val value = inputArea.text.trim()
+            val key   = installationKeyField.text.trim()
             if (value.isNotBlank()) {
-                try {
-                    val encrypted = getEncryptValue(value, installationKeyField.text.trim())
-                    outPutArea.text = encrypted
-                    logPanel.info("Encrypt successful (${value.length} chars)")
-                } catch (e: Exception) {
-                    logPanel.error("Encrypt failed: ${e.message}", e)
-                    showStyledDialog("Encryption error: ${e.message}")
-                }
-                syncLogBadge()
+                runCryptoTask(
+                    activeLabel = "Encrypting",
+                    work = { getEncryptValue(value, key) },
+                    onSuccess = { encrypted ->
+                        outPutArea.text = encrypted
+                        logPanel.info("Encrypt successful (${value.length} chars)")
+                        syncLogBadge()
+                    },
+                    onFailure = { e ->
+                        logPanel.error("Encrypt failed: ${e.message}", e)
+                        syncLogBadge()
+                        showStyledDialog("Encryption error: ${e.message}")
+                    }
+                )
             } else {
                 showStyledDialog("Input field must not be empty before encrypting.")
             }
         }
 
+
         // ── Decrypt ──────────────────────────────────────────────────
         decryptButton.addActionListener {
             val value = inputArea.text.trim()
+            val key   = installationKeyField.text.trim()
             if (value.isNotBlank()) {
-                try {
-                    val decrypted = getDecryptValue(value, installationKeyField.text.trim())
-                    outPutArea.text = decrypted
-                    logPanel.info("Decrypt successful")
-                } catch (e: Exception) {
-                    logPanel.error("Decrypt failed: ${e.message}", e)
-                    showStyledDialog("Decryption error: ${e.message}")
-                }
-                syncLogBadge()
+                runCryptoTask(
+                    activeLabel = "Decrypting",
+                    work = { getDecryptValue(value, key) },
+                    onSuccess = { decrypted ->
+                        outPutArea.text = decrypted
+                        logPanel.info("Decrypt successful")
+                        syncLogBadge()
+                    },
+                    onFailure = { e ->
+                        logPanel.error("Decrypt failed: ${e.message}", e)
+                        syncLogBadge()
+                        showStyledDialog("Decryption error: ${e.message}")
+                    }
+                )
             } else {
                 showStyledDialog("Input field must not be empty before decrypting.")
             }
