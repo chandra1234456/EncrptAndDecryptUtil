@@ -48,33 +48,62 @@ fun formatJson(jsonString: String): String? {
  * @param message The message to display
  * @param durationMs How long the toast shows (milliseconds)
  */
-fun showToast(parent: javax.swing.JFrame, message: String, durationMs: Int = 2000) {
+fun showToast(
+    parent: javax.swing.JFrame,
+    message: String,
+    durationMs: Int = 2000,
+    accent: Color = Color(0x00, 0xD4, 0xFF)
+) {
     val toast = JWindow(parent)
+    toast.focusableWindowState = false
+    toast.background = Color(0, 0, 0, 0)
 
-    // Create label for the message
-    val label = JLabel(message)
-    label.font = Font("Arial", Font.BOLD, 14)
-    label.background = Color(0, 0, 0, 170) // semi-transparent black
-    label.foreground = Color.WHITE
-    label.isOpaque = true
-    label.horizontalAlignment = JLabel.CENTER
-    label.verticalAlignment = JLabel.CENTER
-    label.border = javax.swing.BorderFactory.createEmptyBorder(10, 20, 10, 20)
+    val panel = object : javax.swing.JPanel(java.awt.BorderLayout(10, 0)) {
+        override fun paintComponent(g: java.awt.Graphics) {
+            val g2 = g.create() as java.awt.Graphics2D
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.color = Color(0x13, 0x19, 0x22, 235)
+            g2.fillRoundRect(0, 0, width - 1, height - 1, 14, 14)
+            g2.color = accent
+            g2.stroke = java.awt.BasicStroke(1.2f)
+            g2.drawRoundRect(0, 0, width - 1, height - 1, 14, 14)
+            g2.fillRoundRect(0, 0, 5, height - 1, 5, 5)   // accent bar on the left
+            g2.dispose()
+        }
+    }.apply {
+        isOpaque = false
+        border = javax.swing.BorderFactory.createEmptyBorder(11, 20, 11, 22)
+    }
+    panel.add(JLabel("✓").apply { font = Font("Segoe UI", Font.BOLD, 15); foreground = accent }, java.awt.BorderLayout.WEST)
+    panel.add(JLabel(message).apply { font = Font("Segoe UI", Font.BOLD, 13); foreground = Color(0xE8, 0xF4, 0xFF) }, java.awt.BorderLayout.CENTER)
 
-    toast.contentPane.add(label)
+    toast.contentPane = panel
     toast.pack()
 
-    // Position the toast at the bottom center of the parent frame
-    val parentLocation = parent.location
-    val x = parentLocation.x + (parent.width - toast.width) / 2
-    val y = parentLocation.y + parent.height - toast.height - 50
-    toast.location = Point(x, y)
-
-    // Show the toast
+    // Bottom-centre of the parent, using on-screen position so it also works when the window is moved/maximised
+    val loc = parent.locationOnScreen
+    toast.location = Point(loc.x + (parent.width - toast.width) / 2, loc.y + parent.height - toast.height - 60)
+    toast.opacity = 0f
     toast.isVisible = true
 
-    // Hide it automatically after durationMs
-    Timer(durationMs) { toast.dispose() }.start()
+    // fade in -> hold -> fade out
+    var opacity = 0f
+    var fadingIn = true
+    val start = System.currentTimeMillis()
+    Timer(16, null).apply {
+        addActionListener {
+            val elapsed = System.currentTimeMillis() - start
+            if (fadingIn) {
+                opacity = (opacity + 0.12f).coerceAtMost(1f)
+                if (opacity >= 1f) fadingIn = false
+            } else if (elapsed > durationMs) {
+                opacity = (opacity - 0.08f).coerceAtLeast(0f)
+                if (opacity <= 0f) { stop(); toast.dispose(); return@addActionListener }
+            }
+            toast.opacity = opacity
+        }
+        start()
+    }
 }
 
 

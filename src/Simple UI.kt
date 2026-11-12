@@ -11,6 +11,10 @@ import javax.swing.*
 import javax.swing.border.AbstractBorder
 import javax.swing.border.EmptyBorder
 
+/**
+ * Run Below Command For .exe File in Intellij Terminal
+ */
+//powershell -ExecutionPolicy Bypass -File build.ps1
 // ─────────────────────────────────────────────
 //  THEME CONSTANTS
 // ─────────────────────────────────────────────
@@ -27,19 +31,147 @@ object Theme {
     val TEXT_SECONDARY = Color(0x6A, 0x83, 0xA0)
     val TEXT_MONO      = Color(0xAB, 0xDB, 0xFF)
 
-    val FONT_MONO = Font("JetBrains Mono", Font.PLAIN, 13).let { requested ->
-        val families = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
-        when {
-            "JetBrains Mono" in families -> requested
-            "Cascadia Code"  in families -> Font("Cascadia Code", Font.PLAIN, 13)
-            "Fira Code"      in families -> Font("Fira Code",     Font.PLAIN, 13)
-            "Consolas"       in families -> Font("Consolas",      Font.PLAIN, 13)
-            else                         -> Font(Font.MONOSPACED,  Font.PLAIN, 13)
-        }
-    }
+    // Font.family returns "Dialog" when the face is missing — far cheaper than enumerating all installed fonts at startup.
+    val FONT_MONO: Font = listOf("JetBrains Mono", "Cascadia Code", "Fira Code", "Consolas")
+        .map { name -> name to Font(name, Font.PLAIN, 13) }
+        .firstOrNull { (name, f) -> f.family.equals(name, ignoreCase = true) }?.second
+        ?: Font(Font.MONOSPACED, Font.PLAIN, 13)
     val FONT_UI_BOLD = Font("Segoe UI", Font.BOLD, 12)
     val FONT_UI      = Font("Segoe UI", Font.PLAIN, 12)
     val FONT_LABEL   = Font("Segoe UI", Font.BOLD, 11)
+}
+
+// ─────────────────────────────────────────────
+//  APP ICON (drawn in code, shared with the .exe icon generator)
+// ─────────────────────────────────────────────
+object AppIcon {
+    fun render(size: Int): java.awt.image.BufferedImage {
+        val img = java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        val g = img.createGraphics()
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
+        val s = size.toFloat()
+        g.paint = GradientPaint(0f, 0f, Color(0x1B, 0x25, 0x38), s, s, Theme.BG_DEEP)
+        g.fillRoundRect(0, 0, size, size, (s * 0.22f).toInt(), (s * 0.22f).toInt())
+        // hexagon
+        val cx = s / 2; val cy = s / 2; val r = s * 0.34f
+        val hex = java.awt.geom.Path2D.Float()
+        for (i in 0 until 6) {
+            val ang = Math.toRadians(60.0 * i - 90)
+            val x = (cx + r * Math.cos(ang)).toFloat(); val y = (cy + r * Math.sin(ang)).toFloat()
+            if (i == 0) hex.moveTo(x, y) else hex.lineTo(x, y)
+        }
+        hex.closePath()
+        g.stroke = BasicStroke(s * 0.06f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+        g.paint = GradientPaint(0f, 0f, Theme.ACCENT_CYAN, s, s, Theme.ACCENT_GREEN)
+        g.draw(hex)
+        // keyhole
+        val kr = s * 0.08f
+        g.fill(java.awt.geom.Ellipse2D.Float(cx - kr, cy - kr * 1.6f, kr * 2, kr * 2))
+        g.fill(java.awt.geom.RoundRectangle2D.Float(cx - kr * 0.45f, cy - kr * 0.2f, kr * 0.9f, kr * 2.4f, kr * 0.4f, kr * 0.4f))
+        g.dispose()
+        return img
+    }
+
+    @JvmStatic
+    fun main(args: Array<String>) {   // used by build script: writes PNGs for .ico
+        for (sz in listOf(16, 32, 48, 64, 128, 256))
+            javax.imageio.ImageIO.write(render(sz), "png", java.io.File(args[0], "icon$sz.png"))
+    }
+}
+
+// ─────────────────────────────────────────────
+//  THEMED MESSAGE DIALOG
+// ─────────────────────────────────────────────
+object StyledDialog {
+    fun show(owner: JFrame, title: String, message: String, accent: Color, glyph: String) {
+        val dialog = JDialog(owner, "CryptoTool", true)
+        dialog.isUndecorated = true
+        dialog.iconImages = owner.iconImages
+
+        val badge = object : JLabel(glyph, SwingConstants.CENTER) {
+            override fun paintComponent(g: Graphics) {
+                val g2 = g.create() as Graphics2D
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = Color(accent.red, accent.green, accent.blue, 40)
+                g2.fillOval(0, 0, width - 1, height - 1)
+                g2.color = accent
+                g2.drawOval(0, 0, width - 1, height - 1)
+                g2.dispose()
+                super.paintComponent(g)
+            }
+        }.apply {
+            font = Font("Segoe UI", Font.BOLD, 20); foreground = accent
+            preferredSize = Dimension(44, 44); minimumSize = preferredSize; maximumSize = preferredSize
+        }
+
+        val text = JTextArea(message).apply {
+            lineWrap = true; wrapStyleWord = true; isEditable = false; isOpaque = false
+            font = Theme.FONT_UI.deriveFont(13f); foreground = Theme.TEXT_PRIMARY
+            border = EmptyBorder(0, 0, 0, 0)
+            columns = 28
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
+        val heading = JLabel(title).apply {
+            font = Font("Segoe UI", Font.BOLD, 15); foreground = Theme.TEXT_PRIMARY
+            border = EmptyBorder(2, 0, 6, 0)
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
+        val body = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS); isOpaque = false
+            alignmentX = Component.LEFT_ALIGNMENT
+            add(heading); add(text)
+        }
+        val ok = StyledButton("OK", accent).apply {
+            preferredSize = Dimension(90, 32)
+            addActionListener { dialog.dispose() }
+        }
+        val buttons = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply { isOpaque = false; add(ok) }
+
+        val content = JPanel(BorderLayout(16, 16)).apply {
+            background = Theme.BG_PANEL
+            border = javax.swing.BorderFactory.createCompoundBorder(
+                RoundedBorder(0, accent, 1.5f), EmptyBorder(8, 14, 8, 14))
+            add(JPanel(BorderLayout()).apply { isOpaque = false; add(badge, BorderLayout.NORTH) }, BorderLayout.WEST)
+            add(body, BorderLayout.CENTER)
+            add(buttons, BorderLayout.SOUTH)
+        }
+        dialog.contentPane = content
+        dialog.rootPane.defaultButton = ok
+        dialog.rootPane.registerKeyboardAction({ dialog.dispose() },
+            KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW)
+        dialog.pack()
+        dialog.setLocationRelativeTo(owner)
+        dialog.isVisible = true
+    }
+}
+
+// ─────────────────────────────────────────────
+//  WRAPPING EDITOR KIT (breaks long unbroken strings such as Base64)
+// ─────────────────────────────────────────────
+class WrapEditorKit : javax.swing.text.StyledEditorKit() {
+    private val factory = object : javax.swing.text.ViewFactory {
+        private val base = super@WrapEditorKit.getViewFactory()
+        override fun create(elem: javax.swing.text.Element): javax.swing.text.View {
+            return when (elem.name) {
+                javax.swing.text.AbstractDocument.ContentElementName ->
+                    object : javax.swing.text.LabelView(elem) {
+                        override fun getMinimumSpan(axis: Int): Float =
+                            if (axis == X_AXIS) 0f else super.getMinimumSpan(axis)
+                    }
+                javax.swing.text.AbstractDocument.ParagraphElementName ->
+                    object : javax.swing.text.ParagraphView(elem) {
+                        override fun calculateMinorAxisRequirements(axis: Int, r: SizeRequirements?): SizeRequirements {
+                            val sr = super.calculateMinorAxisRequirements(axis, r)
+                            sr.minimum = 0
+                            return sr
+                        }
+                    }
+                else -> base.create(elem)
+            }
+        }
+    }
+    override fun getViewFactory() = factory
 }
 
 // ─────────────────────────────────────────────
@@ -154,7 +286,7 @@ fun styledScrollPane(view: Component, accentColor: Color): JScrollPane {
         }
         horizontalScrollBar.preferredSize    = Dimension(0, 5)
         verticalScrollBarPolicy              = JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
-        horizontalScrollBarPolicy            = JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        horizontalScrollBarPolicy            = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
     }
 }
 
@@ -186,7 +318,10 @@ class SimpleUI {
     private val inputArea            = JTextPane()
     private val outPutArea           = JTextPane()
     private val installationKeyField = JTextField(10)
-    private lateinit var statusLabel: JLabel
+    private val statusLabel = JLabel("●  Ready").apply {
+        font       = Theme.FONT_LABEL
+        foreground = Theme.ACCENT_GREEN
+    }
 
     // FIX: LogPanel promoted to class field so it is accessible from both
     //      addButtonListeners() and addFrames() without being re-created.
@@ -244,10 +379,8 @@ class SimpleUI {
         encryptButton.isEnabled = !busy
         decryptButton.isEnabled = !busy
         clearButton.isEnabled   = !busy
-        if (::statusLabel.isInitialized) {
-            statusLabel.text = if (busy) "●  $activeLabel…" else "●  Ready"
-            statusLabel.foreground = if (busy) Theme.ACCENT_ORANGE else Theme.ACCENT_GREEN
-        }
+        statusLabel.text = if (busy) "●  $activeLabel…" else "●  Ready"
+        statusLabel.foreground = if (busy) Theme.ACCENT_ORANGE else Theme.ACCENT_GREEN
         jFrame.cursor = if (busy) Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) else Cursor.getDefaultCursor()
     }
 
@@ -278,10 +411,13 @@ class SimpleUI {
             setSize(1000, 580)
             setLocationRelativeTo(null)
             contentPane.background = Theme.BG_DEEP
+            iconImages             = listOf(16, 32, 48, 64, 128, 256).map { AppIcon.render(it) }
         }
     }
 
     private fun initializeTextAreas() {
+        inputArea.editorKit  = WrapEditorKit()
+        outPutArea.editorKit = WrapEditorKit()
         inputArea.apply {
             background = Theme.BG_INPUT
             foreground = Theme.TEXT_MONO
@@ -371,6 +507,12 @@ class SimpleUI {
             }
         }
 
+        jFrame.rootPane.registerKeyboardAction(
+            { encryptButton.doClick() },
+            KeyStroke.getKeyStroke("control ENTER"), JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
+        encryptButton.toolTipText = "Ctrl+Enter"
+
         // ── Clear ────────────────────────────────────────────────────
         clearButton.addActionListener {
             outPutArea.text = ""
@@ -387,9 +529,9 @@ class SimpleUI {
         inPutJsonBeautifier.addActionListener {
             val json = inputArea.text
             when {
-                json.isNullOrBlank() -> showToast(jFrame, "Please add JSON", 2500)
+                json.isNullOrBlank() -> showToast(jFrame, "Please add JSON", 2500, Theme.ACCENT_ORANGE)
                 isValidJson(json)    -> colorJsonInTextPane(inputArea, json)
-                else                 -> showToast(jFrame, "Invalid JSON", 2500)
+                else                 -> showToast(jFrame, "Invalid JSON", 2500, Theme.ACCENT_ORANGE)
             }
         }
 
@@ -398,13 +540,13 @@ class SimpleUI {
         inPutXmlBeautifier.addActionListener {
             val xml = inputArea.text
             if (xml.isNullOrBlank()) {
-                showToast(jFrame, "Please add XML", 2500)
+                showToast(jFrame, "Please add XML", 2500, Theme.ACCENT_ORANGE)
             } else {
                 try {
                     val formatted = formatXml(xml)
                     inputArea.text = formatted
                 } catch (e: Exception) {
-                    showToast(jFrame, "Invalid XML", 2500)
+                    showToast(jFrame, "Invalid XML", 2500, Theme.ACCENT_ORANGE)
                 }
             }
         }
@@ -413,9 +555,9 @@ class SimpleUI {
         outPutJsonBeautifier.addActionListener {
             val json = outPutArea.text
             when {
-                json.isNullOrBlank() -> showToast(jFrame, "Please add JSON", 2500)
+                json.isNullOrBlank() -> showToast(jFrame, "Please add JSON", 2500, Theme.ACCENT_ORANGE)
                 isValidJson(json)    -> colorJsonInTextPane(outPutArea, json)
-                else                 -> showToast(jFrame, "Invalid JSON", 2500)
+                else                 -> showToast(jFrame, "Invalid JSON", 2500, Theme.ACCENT_ORANGE)
             }
         }
 
@@ -424,13 +566,13 @@ class SimpleUI {
         outPutXmlBeautifier.addActionListener {
             val xml = outPutArea.text
             if (xml.isNullOrBlank()) {
-                showToast(jFrame, "Please add XML", 2500)
+                showToast(jFrame, "Please add XML", 2500, Theme.ACCENT_ORANGE)
             } else {
                 try {
                     val formatted = formatXml(xml)
                     outPutArea.text = formatted
                 } catch (e: Exception) {
-                    showToast(jFrame, "Invalid XML", 2500)
+                    showToast(jFrame, "Invalid XML", 2500, Theme.ACCENT_ORANGE)
                 }
             }
         }
@@ -454,7 +596,7 @@ class SimpleUI {
     }
 
     private fun showStyledDialog(message: String) {
-        JOptionPane.showMessageDialog(jFrame, message, "CryptoTool", JOptionPane.ERROR_MESSAGE)
+        StyledDialog.show(jFrame, "Error", message, Theme.ACCENT_ORANGE, "!")
     }
 
     private fun addFrames() {
@@ -485,20 +627,6 @@ class SimpleUI {
             add(Box.createRigidArea(Dimension(4, 0)))
             add(logBadge)
             add(Box.createRigidArea(Dimension(16, 0)))
-
-            // Traffic-light status dots (decorative)
-            for ((col, tip) in listOf(
-                Theme.ACCENT_ORANGE       to "Close",
-                Color(0xF1, 0xC4, 0x0F)  to "Minimise",
-                Theme.ACCENT_GREEN        to "Full Screen"
-            )) {
-                add(JLabel("●").apply {
-                    font        = Font(Font.SANS_SERIF, Font.PLAIN, 14)
-                    foreground  = col
-                    toolTipText = tip
-                })
-                add(Box.createRigidArea(Dimension(6, 0)))
-            }
         }
 
         // ── Separator ─────────────────────────────────────────────────
@@ -606,11 +734,11 @@ class SimpleUI {
         })
 
         /* ── ASSEMBLE MAIN PANEL ── */
-        mainPanel.add(inputColumn)
-        mainPanel.add(Box.createRigidArea(Dimension(18, 0)))
-        mainPanel.add(buttonColumn)
-        mainPanel.add(Box.createRigidArea(Dimension(18, 0)))
-        mainPanel.add(outputColumn)
+        mainPanel.layout = GridBagLayout()
+        val gc = GridBagConstraints().apply { fill = GridBagConstraints.BOTH; weighty = 1.0; gridy = 0 }
+        mainPanel.add(inputColumn,  gc.apply { gridx = 0; weightx = 1.0; insets = Insets(0, 0, 0, 18) })
+        mainPanel.add(buttonColumn, gc.apply { gridx = 1; weightx = 0.0; insets = Insets(0, 0, 0, 18) })
+        mainPanel.add(outputColumn, gc.apply { gridx = 2; weightx = 1.0; insets = Insets(0, 0, 0, 0) })
 
         // ── Status Bar ────────────────────────────────────────────────
         val statusBar = JPanel().apply {
@@ -619,10 +747,7 @@ class SimpleUI {
             border      = EmptyBorder(6, 20, 6, 20)
             maximumSize = Dimension(Int.MAX_VALUE, 32)
 
-            add(JLabel("●  Ready").apply {
-                font      = Theme.FONT_LABEL
-                foreground = Theme.ACCENT_GREEN
-            })
+            add(statusLabel)
             add(Box.createHorizontalGlue())
             add(JLabel("AES-256-CBC  ·  Base64 encoded").apply {
                 font      = Theme.FONT_LABEL
@@ -640,6 +765,7 @@ class SimpleUI {
             add(statusBar)
         }
 
+        root.layout = BoxLayout(root, BoxLayout.Y_AXIS)
         jFrame.contentPane.add(root)
         jFrame.pack()
         jFrame.minimumSize = Dimension(900, 520)
@@ -652,6 +778,9 @@ class SimpleUI {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
+            System.setProperty("awt.useSystemAAFontSettings", "on")
+            System.setProperty("swing.aatext", "true")
+            System.setProperty("sun.java2d.d3d", "true")
             SwingUtilities.invokeLater {
                 SimpleUI().show()
             }
